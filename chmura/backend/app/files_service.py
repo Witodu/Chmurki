@@ -42,3 +42,19 @@ def upload_file(db, storage, user, name, data):
     f.current_version_id = v.id
     db.commit()
     return v
+
+
+def get_file(db, user, file_id):
+    """Zwraca (plik, wersja) jeśli użytkownik ma uprawnienie can_read, otherwise None."""
+    f = (
+        db.query(File)
+        .join(Permission, Permission.file_id == File.id)
+        .filter(Permission.user_id == user.id, File.id == file_id, Permission.can_read)
+        .first()
+    )
+    if f is None:
+        return None
+    v = db.get(FileVersion, f.current_version_id)
+    if v is None:
+        return None
+    return f, v

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = "https://container-app-2765.jollycoast-4334ec34.polandcentral.azurecontainerapps.io";
+const API_URL = "http://localhost:8000";
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem("token") || "");
@@ -76,6 +76,27 @@ export default function App() {
     }
   };
 
+  const downloadFile = async (fileId, fileName) => {
+    try {
+      const res = await axios.get(`${API_URL}/files/${fileId}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      if (err.response?.status === 401) logout();
+      alert("Błąd podczas pobierania pliku.");
+    }
+  };
+
   if (!token) {
     return (
       <div style={{ padding: "40px", fontFamily: "sans-serif" }}>
@@ -91,7 +112,7 @@ export default function App() {
             <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
           </div>
           <button type="submit" style={{ marginTop: "15px" }}>
-            {isREGISTER => isRegistering ? "Zarejestruj się" : "Zaloguj się"}
+            {isRegistering ? "Zarejestruj się" : "Zaloguj się"}
           </button>
         </form>
 
@@ -131,6 +152,7 @@ export default function App() {
             <th>Rozmiar (bajty)</th>
             <th>Wersja</th>
             <th>Data przesłania</th>
+            <th>Akcje</th>
           </tr>
         </thead>
         <tbody>
@@ -140,6 +162,14 @@ export default function App() {
               <td>{f.size}</td>
               <td>v.{f.version}</td>
               <td>{new Date(f.date).toLocaleString()}</td>
+              <td>
+                <button
+                  onClick={() => downloadFile(f.id, f.name)}
+                  style={{ marginRight: "5px", padding: "5px 10px", cursor: "pointer" }}
+                >
+                  Pobierz
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>

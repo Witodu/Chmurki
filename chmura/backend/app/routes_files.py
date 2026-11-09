@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from .auth import get_current_user
 from .database import get_db
-from .files_service import PermissionDenied, upload_file
+from .files_service import PermissionDenied, upload_file, get_file
 from .models import File, FileVersion, Permission, User
 from .storage import Storage
 
@@ -40,3 +41,20 @@ def list_files(user: User = Depends(get_current_user),
     return [{"id": f.id, "name": f.name, "size": v.size,
              "date": v.uploaded_at, "version": v.version_no}
             for f, v in rows]
+
+
+@router.get("/files/{file_id}/download")
+def download_file(file_id: int,
+                  user: User = Depends(get_current_user),
+                  db: Session = Depends(get_db)):
+    result = get_file(db, user, file_id)
+    if result is None:
+        raise HTTPException(404, "Plik nie znaleziony lub brak uprawnień")
+    f, v = result
+    if not storage.exists(v.blob_path):
+        raise HTTPException(404, "Plik nie istnieje na dysku")
+    return FileResponse(
+        path=storage._full(v.blob_path),
+        filename=f.name,
+        media_type="application/octet-stream"
+    )
