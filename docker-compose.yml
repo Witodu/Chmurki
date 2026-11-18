@@ -1,5 +1,6 @@
 services:
   backend:
+    container_name: mw_chmury_backend
     build: ./chmura/backend
     ports:
       - "8001:8000"
